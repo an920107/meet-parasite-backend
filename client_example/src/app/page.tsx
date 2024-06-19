@@ -12,6 +12,7 @@ export default function HomePage({ }: {}) {
   const [isSending, setIsSending] = useState<boolean>(false);
   const [messages, setMessages] = useState<string[]>([]);
   const [message, setMessage] = useState<string>("");
+  const [connectionId, setConnectionId] = useState<number>(0);
 
   /** Called when the button "Connect" is clicked */
   const handleConnect = () => {
@@ -30,7 +31,15 @@ export default function HomePage({ }: {}) {
     createSocket({
       room: room.trim(),
       name: name.trim(),
-      onMessage: (event) => setMessages((value) => ([...value, event.data.toString()])),
+      onIdReceived: setConnectionId,
+      onMessage: (event) => {
+        setMessages((value) => {
+          return [
+            ...value,
+            JSON.stringify(JSON.parse(event.data.toString()), null, 2)
+          ];
+        });
+      },
       onClose: () => {
         setRoom("");
         setName("");
@@ -59,7 +68,7 @@ export default function HomePage({ }: {}) {
     }
 
     // Send the message to backend server
-    fetch(`http://localhost:8000/broadcast?room=${room}&name=${name}`, {
+    fetch(`http://localhost:8000/broadcast?id=${connectionId}`, {
       method: "POST",
       // The content type must be set as "application/json"
       headers: {
@@ -86,9 +95,9 @@ export default function HomePage({ }: {}) {
         <div className="flex flex-row items-center">
           <div className="grid grid-cols-[min-content_min-content] gap-2 m-4">
             <p className="text-nowrap">Room ID:</p>
-            <input className="rounded-md text-black" value={room} onChange={(e) => setRoom(e.target.value)}></input>
+            <input className="rounded-md text-black px-1" value={room} onChange={(e) => setRoom(e.target.value)}></input>
             <p className="text-nowrap">Name:</p>
-            <input className="rounded-md text-black" value={name} onChange={(e) => setName(e.target.value)}></input>
+            <input className="rounded-md text-black px-1" value={name} onChange={(e) => setName(e.target.value)}></input>
           </div>
           <button className="h-fit w-fit font-bold rounded-md border px-2 py-0.5" onClick={handleConnect} disabled={isConnecting}>Connect</button>
         </div>
@@ -97,15 +106,18 @@ export default function HomePage({ }: {}) {
         // Display when the socket has been established
         socket !== null &&
         <div className="flex flex-col w-screen items-center">
-          <div className="flex flex-row gap-2">
+          <div className="flex flex-row gap-2 m-4">
             <p className="text-nowrap">Message:</p>
-            <input className="rounded-md text-black" value={message} onChange={(e) => setMessage(e.target.value)}></input>
+            <input className="rounded-md text-black px-1" value={message} onChange={(e) => setMessage(e.target.value)}></input>
             <button className="h-fit w-fit font-bold rounded-md border px-2 py-0.5" onClick={handleSend} disabled={isSending}>Send</button>
             <button className="h-fit w-fit font-bold rounded-md border px-2 py-0.5" onClick={handleDisconnect}>Disconnect</button>
           </div>
-          <textarea className="rounded-md w-[50%] m-4" rows={16} name="logs" id="logs" disabled={true} value={
-            messages.map((message) => `${message}\n`).join("")
-          }></textarea>
+          <code className="m-4">
+            <textarea className="rounded-md px-2 py-1" rows={24} cols={72} name="logs" id="logs" disabled={true} value={
+              messages.map((message) => `${message}\n`).join("")
+            }></textarea>
+          </code>
+          <p className="m-2">Room: {room}, Name: {name}, Connection ID: {connectionId}</p>
         </div>
       }
     </div>
@@ -116,6 +128,7 @@ export default function HomePage({ }: {}) {
 async function createSocket({
   room,
   name,
+  onIdReceived,
   onMessage,
   onClose,
 }: {
@@ -123,6 +136,8 @@ async function createSocket({
   room: string,
   /** The name of the user */
   name: string,
+  /** (Optional) The callback function to call when the connection ID received */
+  onIdReceived?: (id: number) => void,
   /** (Optional) The callback function to call when messages received from the socket */
   onMessage?: (event: MessageEvent) => void,
   /** (Optional) The callback function to call when the socket is closed */
@@ -156,7 +171,17 @@ async function createSocket({
         onClose(event);
     };
 
+    var firstMessage = true;
     socket.onmessage = (event) => {
+      if (firstMessage) {
+        firstMessage = false;
+        if (onIdReceived !== undefined) {
+          const id = JSON.parse(event.data.toString())["id"];
+          console.log("Connection ID:", id);
+          onIdReceived(id);
+          return;
+        }
+      }
       console.log("Message received:", event.data.toString());
       if (onMessage !== undefined)
         onMessage(event);

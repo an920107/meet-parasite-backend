@@ -1,4 +1,5 @@
 import asyncio
+import ctypes
 from datetime import datetime
 from typing import Annotated
 from fastapi import Body, FastAPI, Response, WebSocket, WebSocketDisconnect
@@ -30,6 +31,7 @@ class SocketManager:
     ) -> Connection:
         await websocket.accept()
         connection = Connection(websocket, room=room, name=name)
+        await websocket.send_json({"id": id(connection)})
         self.connections.setdefault(room, []).append(connection)
         return connection
 
@@ -38,9 +40,12 @@ class SocketManager:
 
     async def broadcast(self, message: Message) -> None:
         for connection in self.connections.setdefault(message.room, []):
-            await connection.websocket.send_text(
-                f"[name: {message.sender} id: {id(connection)} datetime: {datetime.now().isoformat()}] {message.content}"
-            )
+            await connection.websocket.send_json({
+                "id": id(connection),
+                "datetime": datetime.now().isoformat(),
+                "sender": message.sender,
+                "data": message.content,
+            })
 
     async def send_from_queue(self) -> None:
         while True:
@@ -89,8 +94,12 @@ async def create_websocket(websocket: WebSocket, room: str, name: str):
 
 
 @app.post("/broadcast")
-async def broadcast(room: str, name: str, message: Annotated[str, Body(embed=True)]):
-    await manager.add_message(Message(room, name, message))
+async def broadcast(id: int, message: Annotated[str, Body(embed=True)]):
+    try:
+        connection: Connection = ctypes.cast(id, ctypes.py_object).value
+        await manager.add_message(Message(connection.room, connection.name, message))
+    except AttributeError | ValueError:
+        return Response(content=None, status_code=404)
     return Response(content=None, status_code=201)
 
 
