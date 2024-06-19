@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-type Props = {}
+export default function HomePage({ }: {}) {
 
-export default function HomePage({ }: Props) {
+  // Defination for useState objects
   const [room, setRoom] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -13,18 +13,21 @@ export default function HomePage({ }: Props) {
   const [messages, setMessages] = useState<string[]>([]);
   const [message, setMessage] = useState<string>("");
 
+  /** Called when the button "Connect" is clicked */
   const handleConnect = () => {
     setIsConnecting(true);
 
-    if (room.length === 0 || name.length === 0) {
+    // Check if `room` and `name` is empty
+    if (room.trim().length === 0 || name.trim().length === 0) {
       alert("Room ID and Name are required");
       setIsConnecting(false);
       return;
     }
 
+    // Call `createSocket` and then assign to `socket`
     createSocket({
-      room: room,
-      name: name,
+      room: room.trim(),
+      name: name.trim(),
       onMessage: (event) => setMessages((value) => ([...value, event.data.toString()])),
       onClose: () => {
         setMessages([]);
@@ -32,43 +35,52 @@ export default function HomePage({ }: Props) {
       },
     }).then(setSocket);
 
+    // Clear the input fields
     setRoom("");
     setName("");
     setIsConnecting(false);
   };
 
+  /** Called when the button "Disconnect" is clicked */
   const handleDisconnect = () => {
     socket?.close();
   };
 
+  /** Called when the button "Send" is clicked */
   const handleSend = () => {
     setIsSending(true);
 
-    if (message.length === 0) {
+    // Check if the `message` is empty
+    if (message.trim().length === 0) {
       alert("Message is required");
       setIsSending(false);
       return;
     }
 
+    // Send the message to backend server
     fetch("http://localhost:8000/broadcast", {
       method: "POST",
+      // The content type must be set as "application/json"
       headers: {
         "Content-Type": "application/json",
       },
+      // Using JSON.stringify to serialize an object
       body: JSON.stringify({
-        message: message
+        message: message.trim()
       }),
     });
 
+    // Clear the input field
     setMessage("");
     setIsSending(false);
   };
 
-
+  // JSX Content
   return (
     <div className="flex flex-col items-center p-8">
       <h1 className="font-bold text-4xl my-8">WebSocket Client</h1>
       {
+        // Display when the socket hasn't been established
         socket === null &&
         <div className="flex flex-row items-center">
           <div className="grid grid-cols-[min-content_min-content] gap-2 m-4">
@@ -81,6 +93,7 @@ export default function HomePage({ }: Props) {
         </div>
       }
       {
+        // Display when the socket has been established
         socket !== null &&
         <div className="flex flex-col w-screen items-center">
           <div className="flex flex-row gap-2">
@@ -98,15 +111,20 @@ export default function HomePage({ }: Props) {
   )
 }
 
+/** Create a socket with specified `room` and `name` */
 async function createSocket({
   room,
   name,
   onMessage,
   onClose,
 }: {
+  /** The room ID to join (jmo-jsmh-iyo for example) */
   room: string,
+  /** The name of the user */
   name: string,
+  /** (Optional) The callback function to call when messages received from the socket */
   onMessage?: (event: MessageEvent) => void,
+  /** (Optional) The callback function to call when the socket is closed */
   onClose?: (event: CloseEvent) => void,
 }): Promise<WebSocket> {
   return new Promise<WebSocket>((resolve, reject) => {
