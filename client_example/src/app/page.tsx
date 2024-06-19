@@ -20,6 +20,8 @@ export default function HomePage({ }: {}) {
     // Check if `room` and `name` is empty
     if (room.trim().length === 0 || name.trim().length === 0) {
       alert("Room ID and Name are required");
+      setRoom("");
+      setName("");
       setIsConnecting(false);
       return;
     }
@@ -30,14 +32,13 @@ export default function HomePage({ }: {}) {
       name: name.trim(),
       onMessage: (event) => setMessages((value) => ([...value, event.data.toString()])),
       onClose: () => {
+        setRoom("");
+        setName("");
         setMessages([]);
         setSocket(null);
       },
     }).then(setSocket);
 
-    // Clear the input fields
-    setRoom("");
-    setName("");
     setIsConnecting(false);
   };
 
@@ -58,7 +59,7 @@ export default function HomePage({ }: {}) {
     }
 
     // Send the message to backend server
-    fetch("http://localhost:8000/broadcast", {
+    fetch(`http://localhost:8000/broadcast?room=${room}&name=${name}`, {
       method: "POST",
       // The content type must be set as "application/json"
       headers: {
@@ -97,7 +98,7 @@ export default function HomePage({ }: {}) {
         socket !== null &&
         <div className="flex flex-col w-screen items-center">
           <div className="flex flex-row gap-2">
-            <p className="text-nowrap">Message</p>
+            <p className="text-nowrap">Message:</p>
             <input className="rounded-md text-black" value={message} onChange={(e) => setMessage(e.target.value)}></input>
             <button className="h-fit w-fit font-bold rounded-md border px-2 py-0.5" onClick={handleSend} disabled={isSending}>Send</button>
             <button className="h-fit w-fit font-bold rounded-md border px-2 py-0.5" onClick={handleDisconnect}>Disconnect</button>

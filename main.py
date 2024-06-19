@@ -1,32 +1,53 @@
 import asyncio
+from datetime import datetime
 from typing import Annotated
-from fastapi import Body, FastAPI, Response, WebSocket
+from fastapi import Body, FastAPI, Response, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
 
+class Connection:
+    def __init__(self, websocket: WebSocket, *, room: str, name: str):
+        self.websocket = websocket
+        self.name = name
+        self.room = room
+
+
+class Message:
+    def __init__(self, room: str, sender: str, message: str):
+        self.room = room
+        self.sender = sender
+        self.content = message
+
+
 class SocketManager:
     def __init__(self):
-        self.connections: list[WebSocket] = []
+        self.connections: dict[str, list[Connection]] = {}
         self.queue = asyncio.Queue()
 
-    async def connect(self, websocket: WebSocket, *, room: str, name: str):
+    async def connect(
+        self, websocket: WebSocket, *, room: str, name: str
+    ) -> Connection:
         await websocket.accept()
-        self.connections.append(websocket)
+        connection = Connection(websocket, room=room, name=name)
+        self.connections.setdefault(room, []).append(connection)
+        return connection
 
-    def disconnect(self, websocket: WebSocket):
-        self.connections.remove(websocket)
+    def disconnect(self, connection: Connection) -> None:
+        self.connections.get(connection.room).remove(connection)
 
-    async def broadcast(self, message: str):
-        for connection in self.connections:
-            await connection.send_text(message)
+    async def broadcast(self, message: Message) -> None:
+        for connection in self.connections.setdefault(message.room, []):
+            await connection.websocket.send_text(
+                f"[name: {message.sender} id: {id(connection)} datetime: {datetime.now().isoformat()}] {message.content}"
+            )
 
-    async def send_from_queue(self):
+    async def send_from_queue(self) -> None:
         while True:
             message = await self.queue.get()
             await self.broadcast(message)
 
-    async def add_message(self, message: str):
+    async def add_message(self, message: Message) -> None:
         await self.queue.put(message)
 
 
@@ -57,18 +78,19 @@ def index():
 
 @app.websocket("/socket")
 async def create_websocket(websocket: WebSocket, room: str, name: str):
-    print(room, name)
-    await manager.connect(websocket, room=room, name=name)
     try:
+        connection = await manager.connect(websocket, room=room, name=name)
+        await manager.add_message(Message(room, name, f"[{name} has joined]"))
         while True:
             await websocket.receive_text()
-    except:
-        manager.disconnect(websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(connection)
+        await manager.add_message(Message(room, name, f"[{name} has left]"))
 
 
 @app.post("/broadcast")
-async def broadcast(message: Annotated[str, Body(embed=True)]):
-    await manager.add_message(message)
+async def broadcast(room: str, name: str, message: Annotated[str, Body(embed=True)]):
+    await manager.add_message(Message(room, name, message))
     return Response(content=None, status_code=201)
 
 
