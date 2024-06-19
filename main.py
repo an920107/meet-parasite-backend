@@ -1,6 +1,8 @@
 import asyncio
-from fastapi import FastAPI, Response, WebSocket
+from typing import Annotated
+from fastapi import Body, FastAPI, Response, WebSocket
 from fastapi.concurrency import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 
 
 class SocketManager:
@@ -8,7 +10,7 @@ class SocketManager:
         self.connections: list[WebSocket] = []
         self.queue = asyncio.Queue()
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, *, room: str, name: str):
         await websocket.accept()
         self.connections.append(websocket)
 
@@ -23,7 +25,7 @@ class SocketManager:
         while True:
             message = await self.queue.get()
             await self.broadcast(message)
-    
+
     async def add_message(self, message: str):
         await self.queue.put(message)
 
@@ -39,6 +41,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/")
 def index():
@@ -46,9 +56,9 @@ def index():
 
 
 @app.websocket("/socket")
-async def create_websocket(websocket: WebSocket, id: str):
-    print(id)
-    await manager.connect(websocket)
+async def create_websocket(websocket: WebSocket, room: str, name: str):
+    print(room, name)
+    await manager.connect(websocket, room=room, name=name)
     try:
         while True:
             await websocket.receive_text()
@@ -56,8 +66,8 @@ async def create_websocket(websocket: WebSocket, id: str):
         manager.disconnect(websocket)
 
 
-@app.post("/yield")
-async def post_yield(message: str):
+@app.post("/broadcast")
+async def broadcast(message: Annotated[str, Body(embed=True)]):
     await manager.add_message(message)
     return Response(content=None, status_code=201)
 
