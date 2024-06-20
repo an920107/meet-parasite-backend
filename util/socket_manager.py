@@ -18,7 +18,7 @@ class Message(BaseModel):
     sender_id: int
     sender_name: str
     data: BaseModel
-    created_time: datetime = Field(..., default_factory=lambda: datetime.now())
+    created_time: datetime = Field(..., default_factory=lambda: datetime.now().astimezone())
     
     @field_serializer("data")
     def serializer_data(self, data: BaseModel, _info):
