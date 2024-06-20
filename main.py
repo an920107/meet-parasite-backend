@@ -19,6 +19,8 @@ from pydantic import BaseModel
 
 from model.broadcast import Broadcast
 from model.bullet_comment import BulletComment
+from model.pin import Pin
+from model.timer import Timer
 from util.socket_manager import SocketManager
 from util.token import JwtPayload, Token
 
@@ -125,6 +127,20 @@ async def bullet_comment(
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
 ):
     return await general_post(jwt_payload.id, payload, "bullet_comment")
+
+@app.post("/timer", status_code=201)
+async def bullet_comment(
+    payload: Timer,
+    jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
+):
+    return await general_post(jwt_payload.id, payload, "timer")
+
+@app.post("/pin", status_code=201)
+async def bullet_comment(
+    payload: Pin,
+    jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
+):
+    return await general_post(jwt_payload.id, payload, "pin")
 
 
 if __name__ == "__main__":
