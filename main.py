@@ -22,6 +22,7 @@ class Message:
         self.sender_id = sender_id
         self.sender = sender
         self.content = data
+        self.created_time = datetime.now()
 
 
 class SocketManager:
@@ -46,9 +47,9 @@ class SocketManager:
             if connection.room == message.room:
                 await connection.websocket.send_json(
                     {
-                        "id": message.sender_id,
-                        "datetime": datetime.now().isoformat(),
+                        "sender_id": message.sender_id,
                         "sender": message.sender,
+                        "created_time": message.created_time.isoformat(),
                         "data": (
                             message.content
                             if type(message.content) is str
@@ -103,17 +104,23 @@ def index():
 async def create_websocket(websocket: WebSocket, room: str, name: str):
     try:
         connection = await manager.connect(websocket, room=room, name=name)
-        await manager.add_message(id(connection), {
-            "event": "info",
-            "message": f"{name} has joined the room.",
-        })
+        await manager.add_message(
+            id(connection),
+            {
+                "event": "info",
+                "message": f"{name} has joined the room.",
+            },
+        )
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        await manager.add_message(id(connection), {
-            "event": "info",
-            "message": f"{name} is leaving the room."
-        })
+        await manager.add_message(
+            id(connection),
+            {
+                "event": "info",
+                "message": f"{name} is leaving the room.",
+            },
+        )
         manager.disconnect(connection)
 
 
