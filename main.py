@@ -3,7 +3,6 @@ from typing import Annotated
 from wsgiref.headers import Headers
 
 from fastapi import (
-    Body,
     Depends,
     FastAPI,
     HTTPException,
@@ -14,6 +13,8 @@ from fastapi import (
 )
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import jwt
 from pydantic import BaseModel
 
 from model.broadcast import Broadcast
@@ -40,17 +41,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+security = HTTPBearer()
+
 
 async def verify_credential(
-    authorization: Annotated[str | None, Header()] = None
-) -> str:
-    if authorization is None:
-        raise HTTPException(status_code=401, detail="Credential is required")
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+) -> JwtPayload:
 
-    jwt_payload = Token.decode_jwt_from_header(authorization)
+    splitted_credentials = credentials.credentials.strip(" ").split(" ")
+    if credentials.scheme != "Bearer" or len(splitted_credentials) != 1:
+        raise HTTPException(status_code=403, detail="Unknown credential scheme")
+
+    try:
+        jwt_payload = Token.decode_jwt(splitted_credentials[0])
+    except jwt.exceptions.DecodeError:
+        raise HTTPException(status_code=401, detail="Invalid credential")
+
     if (
-        jwt_payload is None
-        or manager.get_connection(
+        manager.get_connection(
             jwt_payload.id,
             created_time=jwt_payload.created_time,
         )
@@ -99,11 +107,11 @@ async def general_post(sender_id: int, data: BaseModel, event: str) -> Response:
             data=data,
         )
     except KeyError:
-        return Response(content=None, status_code=404)
+        raise HTTPException(status_code=404, detail="Invalid sender ID")
     return Response(content=None, status_code=201)
 
 
-@app.post("/broadcast")
+@app.post("/broadcast", status_code=201)
 async def broadcast(
     payload: Broadcast,
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
@@ -111,7 +119,7 @@ async def broadcast(
     return await general_post(jwt_payload.id, payload, "broadcast")
 
 
-@app.post("/bullet-comment")
+@app.post("/bullet-comment", status_code=201)
 async def bullet_comment(
     payload: BulletComment,
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],

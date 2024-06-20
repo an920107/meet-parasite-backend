@@ -36,15 +36,3 @@ class Token:
             algorithms=["HS256"],
         )
         return JwtPayload(**decoded)
-
-    @staticmethod
-    def decode_jwt_from_header(header: str | None) -> JwtPayload | None:
-        if header is None:
-            return None
-        header_splitted = header.split(" ")
-        if len(header_splitted)!= 2 or header_splitted[0]!= "Bearer":
-            return None
-        try:
-            return Token.decode_jwt(header_splitted[1])
-        except jwt.exceptions.DecodeError as e:
-            return None
