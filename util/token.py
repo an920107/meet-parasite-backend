@@ -8,6 +8,7 @@ from pydantic import BaseModel, field_serializer
 class JwtPayload(BaseModel):
     id: int
     name: str
+    room: str
     created_time: datetime
 
     @field_serializer("created_time")

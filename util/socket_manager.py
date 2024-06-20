@@ -44,6 +44,7 @@ class SocketManager:
             JwtPayload(
                 id=id(connection),
                 name=name,
+                room=room,
                 created_time=connection.created_time,
             )
         )

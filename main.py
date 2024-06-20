@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from model.broadcast import Broadcast
 from model.bullet_comment import BulletComment
 from model.canvas import Canvas, CanvasType
+from model.participant import Participant
 from model.pin import Pin
 from model.timer import Timer
 from util.socket_manager import SocketManager
@@ -98,8 +99,15 @@ async def create_websocket(websocket: WebSocket, room: str, name: str):
 
 
 @app.get("/participant")
-async def get_participants():
-    return Response(content=None, status_code=204)
+async def get_participants(
+    jwt_payload: Annotated[JwtPayload, Depends(verify_credential)]
+) -> list[Participant]:
+    return list(
+        map(
+            lambda x: Participant(id=id(x), name=x.name),
+            filter(lambda x: x.room == jwt_payload.room, manager.connections.values()),
+        )
+    )
 
 
 async def general_post(sender_id: int, data: BaseModel, event: str) -> Response:
@@ -129,12 +137,14 @@ async def bullet_comment(
 ):
     return await general_post(jwt_payload.id, payload, "bullet_comment")
 
+
 @app.post("/timer", status_code=201)
 async def timer(
     payload: Timer,
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
 ):
     return await general_post(jwt_payload.id, payload, "timer")
+
 
 @app.post("/pin", status_code=201)
 async def pin(
