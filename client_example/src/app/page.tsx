@@ -13,6 +13,7 @@ export default function HomePage({ }: {}) {
   const [messages, setMessages] = useState<string[]>([]);
   const [message, setMessage] = useState<string>("");
   const [connectionId, setConnectionId] = useState<number>(0);
+  const [accessToken, setAccessToken] = useState<string>("");
 
   /** Called when the button "Connect" is clicked */
   const handleConnect = () => {
@@ -31,7 +32,10 @@ export default function HomePage({ }: {}) {
     createSocket({
       room: room.trim(),
       name: name.trim(),
-      onIdReceived: setConnectionId,
+      onConnectionInfoReceived: ({ id, token }) => {
+        setConnectionId(id);
+        setAccessToken(token);
+      },
       onMessage: (event) => {
         setMessages((value) => {
           return [
@@ -68,11 +72,12 @@ export default function HomePage({ }: {}) {
     }
 
     // Send the message to backend server
-    fetch(`http://localhost:8000/broadcast?id=${connectionId}`, {
+    fetch(`http://localhost:8000/broadcast`, {
       method: "POST",
       // The content type must be set as "application/json"
       headers: {
         "Content-Type": "application/json",
+        "Authorization": "Bearer " + accessToken,
       },
       // Using JSON.stringify to serialize an object
       body: JSON.stringify({
@@ -124,11 +129,16 @@ export default function HomePage({ }: {}) {
   )
 }
 
+interface ConnectionInfo {
+  id: number;
+  token: string;
+}
+
 /** Create a socket with specified `room` and `name` */
 async function createSocket({
   room,
   name,
-  onIdReceived,
+  onConnectionInfoReceived,
   onMessage,
   onClose,
 }: {
@@ -137,7 +147,7 @@ async function createSocket({
   /** The name of the user */
   name: string,
   /** (Optional) The callback function to call when the connection ID received */
-  onIdReceived?: (id: number) => void,
+  onConnectionInfoReceived?: (info: ConnectionInfo) => void,
   /** (Optional) The callback function to call when messages received from the socket */
   onMessage?: (event: MessageEvent) => void,
   /** (Optional) The callback function to call when the socket is closed */
@@ -175,10 +185,13 @@ async function createSocket({
     socket.onmessage = (event) => {
       if (firstMessage) {
         firstMessage = false;
-        if (onIdReceived !== undefined) {
-          const id = JSON.parse(event.data.toString())["id"];
+        if (onConnectionInfoReceived !== undefined) {
+          const payload = JSON.parse(event.data.toString());
+          const id = payload["id"];
+          const token = payload["token"];
           console.log("Connection ID:", id);
-          onIdReceived(id);
+          console.log("Access token:", token);
+          onConnectionInfoReceived({ id: id, token: token });
           return;
         }
       }
