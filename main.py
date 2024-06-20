@@ -8,7 +8,8 @@ from fastapi import Body, FastAPI, Response, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
-from socket_manager import SocketManager
+from model.broadcast import Broadcast
+from util.socket_manager import SocketManager
 
 manager = SocketManager()
 
@@ -40,21 +41,21 @@ async def create_websocket(websocket: WebSocket, room: str, name: str):
     try:
         connection = await manager.connect(websocket, room=room, name=name)
         await manager.add_message(
-            id(connection),
-            {
-                "event": "info",
-                "message": f"{name} has joined the room.",
-            },
+            sender_id=id(connection),
+            event="info",
+            data=Broadcast(
+                message=f"{name} has joined the room.",
+            ),
         )
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         await manager.add_message(
-            id(connection),
-            {
-                "event": "info",
-                "message": f"{name} is leaving the room.",
-            },
+            sender_id=id(connection),
+            event="info",
+            data=Broadcast(
+                message=f"{name} has joined the room.",
+            ),
         )
         manager.disconnect(connection)
 
@@ -63,11 +64,9 @@ async def create_websocket(websocket: WebSocket, room: str, name: str):
 async def broadcast(id: int, message: Annotated[str, Body(embed=True)]):
     try:
         await manager.add_message(
-            id,
-            {
-                "event": "broadcast",
-                "message": message,
-            },
+            sender_id=id,
+            event="broadcast",
+            data=Broadcast(message=message),
         )
     except KeyError:
         return Response(content=None, status_code=404)

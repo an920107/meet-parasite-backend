@@ -1,7 +1,8 @@
 import asyncio
 from datetime import datetime
-import json
+
 from fastapi import WebSocket
+from pydantic import BaseModel, Field, field_serializer
 
 
 class Connection:
@@ -11,13 +12,17 @@ class Connection:
         self.room = room
 
 
-class Message:
-    def __init__(self, *, sender_id: int, room: str, sender: str, data: object):
-        self.room = room
-        self.sender_id = sender_id
-        self.sender = sender
-        self.content = data
-        self.created_time = datetime.now()
+class Message(BaseModel):
+    event: str
+    room: str
+    sender_id: int
+    sender_name: str
+    data: BaseModel
+    created_time: datetime = Field(..., default_factory=lambda: datetime.now())
+    
+    @field_serializer("data")
+    def serializer_data(self, data: BaseModel, _info):
+        return data.model_dump()
 
 
 class SocketManager:
@@ -40,31 +45,21 @@ class SocketManager:
     async def broadcast(self, message: Message) -> None:
         for connection in self.connections.values():
             if connection.room == message.room:
-                await connection.websocket.send_json(
-                    {
-                        "sender_id": message.sender_id,
-                        "sender": message.sender,
-                        "server_received_time": message.created_time.isoformat(),
-                        "data": (
-                            message.content
-                            if type(message.content) is str
-                            else json.loads(json.dumps(message.content))
-                        ),
-                    }
-                )
+                await connection.websocket.send_text(message.model_dump_json())
 
     async def send_from_queue(self) -> None:
         while True:
             message = await self.queue.get()
             await self.broadcast(message)
 
-    async def add_message(self, sender_id: str, data: object) -> None:
+    async def add_message(self, *, sender_id: str, event: str, data: object) -> None:
         connection = self.connections[sender_id]
         await self.queue.put(
             Message(
-                sender_id=sender_id,
+                event=event,
                 room=connection.room,
-                sender=connection.name,
+                sender_id=sender_id,
+                sender_name=connection.name,
                 data=data,
             )
         )
