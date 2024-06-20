@@ -14,6 +14,11 @@ This project is to serve the backend of the meet parasite, so that the clients c
   - Clients -> Server: http methods
     > Using http to send data to server because FastAPI has a convenient and perfect type checking, which helps avoid some basic problems.
 
+### File Structure
+
+- [**main.py**](./main.py): The backend server entry script. It should be start with uvicorn.
+- [**page.tsx**](./client_example/src/app/page.tsx): The main page of the example.
+
 ### Usage
 
 #### Run Python Server
