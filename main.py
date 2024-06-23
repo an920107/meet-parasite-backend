@@ -129,14 +129,14 @@ async def bullet_comment(
     return await general_post(jwt_payload.id, payload, "bullet_comment")
 
 @app.post("/timer", status_code=201)
-async def bullet_comment(
+async def timer(
     payload: Timer,
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
 ):
     return await general_post(jwt_payload.id, payload, "timer")
 
 @app.post("/pin", status_code=201)
-async def bullet_comment(
+async def pin(
     payload: Pin,
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
 ):
