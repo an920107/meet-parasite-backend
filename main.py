@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from model.broadcast import Broadcast
 from model.bullet_comment import BulletComment
+from model.canvas import Canvas, CanvasType
 from model.pin import Pin
 from model.timer import Timer
 from util.socket_manager import SocketManager
@@ -142,6 +143,13 @@ async def pin(
 ):
     return await general_post(jwt_payload.id, payload, "pin")
 
+@app.post("/canvas", status_code=201)
+async def canvas(
+    type: CanvasType,
+    payload: Canvas,
+    jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
+):
+    return await general_post(jwt_payload.id, payload, type)
 
 if __name__ == "__main__":
     import uvicorn
