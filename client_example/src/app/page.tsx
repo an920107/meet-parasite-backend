@@ -72,7 +72,7 @@ export default function HomePage({ }: {}) {
     }
 
     // Send the message to backend server
-    fetch(`http://localhost:8000/broadcast`, {
+    fetch(`https://api.squidspirit.com/meet-parasite-backend/broadcast`, {
       method: "POST",
       // The content type must be set as "application/json"
       headers: {
@@ -154,7 +154,7 @@ async function createSocket({
   onClose?: (event: CloseEvent) => void,
 }): Promise<WebSocket> {
   return new Promise<WebSocket>((resolve, reject) => {
-    const socket = new WebSocket(`ws://localhost:8000/socket?room=${room}&name=${name}`);
+    const socket = new WebSocket(`wss://api.squidspirit.com/meet-parasite-backend/socket?room=${room}&name=${name}`);
     console.log("Connecting...");
 
     const timeout = setTimeout(() => {
