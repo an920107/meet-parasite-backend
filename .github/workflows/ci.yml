@@ -20,4 +20,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ vars.REGISTRY_USERNAME }}/${{ github.event.repository.name }}:latest
+          tags: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USERNAME }}/${{ github.event.repository.name }}:latest
