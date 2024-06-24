@@ -39,5 +39,5 @@ jobs:
             podman pull ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USERNAME }}/${{ github.event.repository.name }}:latest
             podman stop --ignore ${{ github.event.repository.name }}
             podman rm --ignore ${{ github.event.repository.name }}
-            podman run -d -p ${{ vars.PUBLISH_PORT }}:8000 --restart always --name ${{ github.event.repository.name }} ${{ github.event.repository.name }}
+            podman run -d -p ${{ vars.PUBLISH_PORT }}:8000 -v /etc/localtime:/etc/localtime:ro --restart always --name ${{ github.event.repository.name }} ${{ github.event.repository.name }}
             podman logout --all
