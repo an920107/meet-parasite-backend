@@ -34,10 +34,6 @@ jobs:
           username: ${{ vars.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            podman logout --all
             podman login ${{ vars.REGISTRY }} -u ${{ vars.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
             podman pull ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USERNAME }}/${{ github.event.repository.name }}:latest
-            podman stop --ignore ${{ github.event.repository.name }}
-            podman rm --ignore ${{ github.event.repository.name }}
-            podman run -d -p ${{ vars.PUBLISH_PORT }}:8000 -v /etc/localtime:/etc/localtime:ro --restart always --name ${{ github.event.repository.name }} ${{ github.event.repository.name }}
-            podman logout --all
+            podman run -d -p ${{ vars.PUBLISH_PORT }}:8000 -v /etc/localtime:/etc/localtime:ro --restart always --replace --name ${{ github.event.repository.name }} ${{ github.event.repository.name }}
