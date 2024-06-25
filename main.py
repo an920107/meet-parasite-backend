@@ -1,12 +1,10 @@
 import asyncio
 from typing import Annotated
-from wsgiref.headers import Headers
 
 from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
-    Header,
     Response,
     WebSocket,
     WebSocketDisconnect,
@@ -20,6 +18,7 @@ from pydantic import BaseModel
 from model.broadcast import Broadcast
 from model.bullet_comment import BulletComment
 from model.canvas import Canvas, CanvasType
+from model.draw import Draw
 from model.participant import Participant
 from model.pin import Pin
 from model.timer import Timer
@@ -152,6 +151,15 @@ async def pin(
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
 ):
     return await general_post(jwt_payload.id, payload, "pin")
+
+
+@app.post("/draw", status_code=201)
+async def pin(
+    payload: Draw,
+    jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
+):
+    return await general_post(jwt_payload.id, payload, "draw")
+
 
 @app.post("/canvas", status_code=201)
 async def canvas(
