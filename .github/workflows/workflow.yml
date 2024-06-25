@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+env:
+  IMAGE: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USERNAME }}/${{ github.event.repository.name }}:latest
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,7 +24,7 @@ jobs:
           push: true
           build-args: 
             BASE_URL=${{ vars.BASE_URL }}
-          tags: ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USERNAME }}/${{ github.event.repository.name }}:latest
+          tags: ${{ env.IMAGE }}
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -36,4 +38,4 @@ jobs:
           script: |
             podman login ${{ vars.REGISTRY }} -u ${{ vars.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
             podman pull ${{ vars.REGISTRY }}/${{ vars.REGISTRY_USERNAME }}/${{ github.event.repository.name }}:latest
-            podman run -d -p ${{ vars.PUBLISH_PORT }}:8000 -v /etc/localtime:/etc/localtime:ro --restart always --replace --name ${{ github.event.repository.name }} ${{ github.event.repository.name }}
+            podman run -d -p ${{ vars.PUBLISH_PORT }}:8000 -v /etc/localtime:/etc/localtime:ro --restart always --replace --name ${{ github.event.repository.name }} ${{ env.IMAGE }}
