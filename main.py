@@ -154,7 +154,7 @@ async def pin(
 
 
 @app.post("/draw", status_code=201)
-async def pin(
+async def draw(
     payload: Draw,
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
 ):

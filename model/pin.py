@@ -3,6 +3,5 @@ from pydantic import BaseModel
 
 
 class Pin(BaseModel):
+    sender: str
     message: str
-    created_time: datetime
-    recipients: list[str]
