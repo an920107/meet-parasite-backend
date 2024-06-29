@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class BulletComment(BaseModel):
     anonymous: bool
+    fromUser: str
     type: int
     message: str
     emoji: str
