@@ -11,13 +11,14 @@ class Canvas(BaseModel):
     canvas_width: float
     canvas_height: float
     stroke_style: str
-    line_width: int
+    fill_style: str
+    line_width: float
     line_cap: str
-    line_dash: list[int]
+    line_dash: list[float]
     global_composite_operation: str
     font_type: str
-    font_size: int
-    text_max_width: int
+    font_size: float
+    text_max_width: float
     text_baseline: str
     content_text: str | None = None
 
