@@ -1,4 +1,5 @@
 import asyncio
+import random
 from typing import Annotated
 
 from fastapi import (
@@ -155,11 +156,11 @@ async def pin(
 
 @app.post("/draw", status_code=201)
 async def draw(
-    payload: Draw,
     jwt_payload: Annotated[JwtPayload, Depends(verify_credential)],
 ):
-    return await general_post(jwt_payload.id, payload, "draw")
-
+    conns = list(filter(lambda x: x.room == jwt_payload.room, manager.connections.values()))
+    random.shuffle(conns)
+    return await general_post(jwt_payload.id, Draw(target=conns[0].name), "draw")
 
 @app.post("/canvas", status_code=201)
 async def canvas(
